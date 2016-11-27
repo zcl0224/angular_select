@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Document</title>
+	<script src="js/jquery-1.12.4.js" type="text/javascript"></script>
+	<script src="js/angular.js"></script>
+	<script src="js/angular-resource.js"></script>
+</head>
+<body ng-app='myapp'>
+	<ul class="list" ng-controller='controller'>
+		<li ng-repeat='n in books | filter:changeType()'>
+			<span>{{n.num}}</span>
+			<span>{{n.name}}</span>
+			<span>{{n.author}}</span>
+			<span><a href="#" ng-click='change($index)'>修改</a></span>
+			<span><a href="#" ng-click='del($index)'>删除</a></span>
+		</li>
+	</ul>
+</body>
+<script>
+	var Services = angular.module('Services',['ngResource']);
+	Services.factory('bookList',['$resource',function($resource){
+		return $resource('./:fileName.:format',{fileName:'book',format:'json'},{
+			query:{method:"GET",isArray:true}
+		});
+	}])
+	Services.factory('deleteServer',function(){
+		return function(lists,index){
+			$.ajax({
+				type:'post',
+				url:'./book.php',
+				async:true,
+				data:{'type':'del','name':lists[index].name},
+				success:function(data){
+					console.log(data);
+				}
+			})
+		}
+	})
+	var myapp = angular.module('myapp',['Services']);
+	myapp.controller('controller',function($scope,bookList,deleteServer){
+		$scope.books = bookList.query();
+		$scope.del = function(index){
+			deleteServer($scope.books,index);
+		}
+	})
+
+</script>
+</html>

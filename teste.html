@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="lib/jquery-2.1.3.min.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
+    <link type="text/css" rel="stylesheet" href="lib/bootstrap.min.css">
+
+    <script src="lib/angular.js"></script>
+    <script src="lib/angular-resource.min.js"></script>
+    <script src="js/main.js"></script>
+    <style type="text/css">
+        body {
+            font-family: 微软雅黑;
+            color: #ffffff;
+        }
+
+        thead {
+            background-color: #0e93f0;
+            color: #ffffff;
+            font-size: 18px;
+        }
+
+        thead td:hover {
+            cursor: pointer;
+        }
+
+        td {
+            text-align: center;
+        }
+
+        tbody td:hover {
+            cursor: pointer;
+            background-color: #f00d10;
+            color: #ffffff;
+        }
+
+        thead td span {
+            margin: 0px 0px 0px 20px;
+        }
+
+        .back {
+            background-color: #080808;
+        }
+        .odd{
+            background-color: #ff7c07;
+        }
+        .even{
+            background-color: #27c715;
+        }
+    </style>
+    <script>
+        $(function () {
+            $('.tableHeader').click(function () {
+                $(this).children('span').toggleClass('glyphicon-sort-by-attributes-alt');
+            });
+        });
+
+    </script>
+</head>
+<body>
+<div ng-app="myApp">
+    <div class="container" ng-controller="myAppController">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="form-group">
+                    <!--绑定一个数据模型变量search，用于接收用户在输入框中写入的内容-->
+                    <input class="form-control" ng-model="search" placeholder="input the key word to search"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div>
+                    <table class="table table-bordered">
+                        <thead class="text-center">
+                        <tr>
+                            <td ng-click="sortByName()" class="tableHeader">Name<span
+                                    class="glyphicon glyphicon-sort-by-attributes"></span>
+                            </td>
+                            <td ng-click="sortByLanguage()" class="tableHeader">Language<span
+                                    class="glyphicon glyphicon-sort-by-attributes"></span></td>
+                            <td ng-click="sortByPrice()" class="tableHeader">Price<span
+                                    class="glyphicon glyphicon-sort-by-attributes"></span></td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!--books是控制器的scope作用域中的一个对象；通过过滤器，以search变量的值为筛选条件，筛选出合格的行内容-->
+                        <tr ng-repeat="book in books | orderBy:item:reverse | filter:search"
+                            ng-class="{odd:$odd,even:$even}">
+                            <!--给表格的每一行的三个列元素都加入ngClick指令，当点击某个单元格时，执行一个函数clickAlert（），这个函数传入的参数就是这个td元素绑定的作用域里的数据模型，即单元格里要显示的内容-->
+                            <td ng-click="clickAlert(book.name)">{{book.name}}</td>
+                            <td ng-click="clickAlert(book.language)">{{book.language}}</td>
+                            <td ng-click="clickAlert(book.price)">{{book.price | currency:'￥'}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    /*
+ 不建议使用这种方式进行数据的提取。
+
+ 1：首先不安全，因为实际的信息写在了js文件中，随着用户打开网页，这个js文件也会下载到客户端，用户通过一些方式就可以看到信息的源码。
+ 2：这种将实际的原始内容和业务逻辑代码写在一起的方式，在后期程序维护的时候会很麻烦。而且条理不够清晰。
+
+ var Services = angular.module('Services', []);
+ Services.factory('booksService', function () {
+ var books = {};
+ books.list = [
+ {
+ "name": "Java程序开发从入门到精通",
+ "language": "Java",
+ "price": 68
+ },
+ {
+ "name": "Java设计模式",
+ "language": "Java",
+ "price": 45.6
+ },
+ {
+ "name": "angularJS开发web应用",
+ "language": "Javascript",
+ "price": 34
+ },
+ {
+ "name": "HTML5/CSS3/JavaScript网站开发教程",
+ "language": "HTML CSS Javascript",
+ "price": 23
+ },
+ {
+ "name": "MongoDB数据库应用与开发实战",
+ "language": "NoSQL",
+ "price": 48.9
+ },
+ {
+ "name": "NodeJS服务器应用",
+ "language": "Javascript",
+ "price": 39.3
+ },
+ {
+ "name": "Bootstrap响应式网页设计",
+ "language": "CSS",
+ "price": 35
+ }
+ ];
+ return books;
+ });
+ */
+
+//注册一个模块，这里需要引入系统内建的ngResource模块，同时还需要在首页的head标签内引入ngResource对应的js文件。因为下面需要进入的$resource内建的服务的定义就在这个js文件中。
+var Services = angular.module('Services', ['ngResource']);
+//在这个模块下注册两个自定义服务，一个是用户列出数目信息。内建的服务$resource作为依赖注入到这个服务的构造函数中。
+Services.factory('booksListService', ['$resource', function ($resource) {
+    //返回一个$resource对象，第一个属性是url，这个url带有两个变量
+    //第二个属性是对于url的两个变量的赋值
+    //第三个属性是一个action的函数，冒号前面的是这个函数的函数名，冒号后面是这个函数执行的方式。【以get的方式把客户端的信息传递给服务端，并得到数据；isArray为true，则表示从服务端的内容会以数组的形式返回。】
+    return $resource('data/:fileName.:format', {fileName: 'books', format: 'json'}, {
+        query: {method: 'GET', isArray: true}
+    });
+}]);
+
+
+//一个是用于执行点击后的动作
+Services.factory('alertService', function () {
+    //直接返回一个函数，这里利用的是JavaScript的闭包。这样做的好处就是在控制器里可以直接以这个服务名作为函数来使用。
+    return function (message) {
+        //正则表达的判定
+        if (/[0-9]+$/.test(message)) {
+            alert("￥" + message + " is not a high price");
+        } else if (/([a-zA-Z]+)$/.test(message)) {
+            alert("This book is about \"" + message + "\" programming language")
+        } else {
+            alert("《" + message + "》 is a good book");
+        }
+    };
+});
+//整个页面的模块myApp，当进行注册的时候，依赖注入了另一个我们上面自定义的模块Services，这样Services里面的两个服务就可以在myApp所在的范围内调取使用了
+var myApp = angular.module('myApp', ['Services']);
+//注册控制器，在控制器的构造函数中传入Services这个模块中定义的两个服务
+myApp.controller('myAppController', function ($scope, booksListService, alertService) {
+    //上面再定义booksListService时，返回的是一个对象，这个对象里有一个方法是query。这里就可以用服务名作为对象，调用这个服务里的方法query（）。
+    $scope.books = booksListService.query();
+    //给作用域添加函数，函数传入的参数就是页面视图中td标签所绑定的内容。
+    //而alertService这个服务在定义的时候返回的是一个函数，所以这里就可以拿这个服务的名字作为函数名来使用。
+    $scope.clickAlert = function (message) {
+        alertService(message);
+    };
+    $scope.item = 'name';
+    $scope.reverse = false;
+    $scope.sortByName = function () {
+        $scope.item = 'name';
+        $scope.reverse = !$scope.reverse;
+
+    };
+    $scope.sortByLanguage = function () {
+        $scope.item = 'language';
+        $scope.reverse = !$scope.reverse;
+    };
+    $scope.sortByPrice = function () {
+        $scope.item = 'price';
+        $scope.reverse = !$scope.reverse;
+    };
+});
+</script>
+</html>
